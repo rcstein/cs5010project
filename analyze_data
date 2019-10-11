@@ -1,1 +1,81 @@
+!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jul 23 10:06:27 2019
+
+@author: becca
+"""
+import pandas as pd 
+
+from data import *
+
+import us_state_abbrev as us 
+
+################################# Data analysis ##################################################
+
+
+#%% Calculate deaths per state as proportion of population using 2018 National and State Population Estimates from U.S. Census Bureau (source: https://www.census.gov/newsroom/press-kits/2018/pop-estimates-national-state.html)
+
+state_pop = pd.read_csv('2018-pop-data.csv')
+
+# Rename NAME column to State to make merging with fire dataset easier
+
+state_pop.drop(index = [0, 1, 2, 3, 4, 56], columns = ["STATE"], inplace = True)
+
+
+state_pop.rename(columns = {"NAME" : "State"}, inplace = True)
+
+# Use us_state_abbrev dictionary from GitHub user rogerallen to convert state names to abbreviations (download at https://gist.githubusercontent.com/rogerallen/1583593/raw/e78a0c47bac18ce810ae3b75a32b102435413128/us_state_abbrev.py)
+
+
+for i in state_pop["State"]:
+    
+    state_pop.replace([i], us.us_state_abbrev[i], inplace = True)
+    
+# Subset 2018 population data
+
+state_pop_2018 = state_pop[["State", "POPESTIMATE2018"]].copy()
+
+
+# Subset incidents by state and # of deaths, group by state to find death total by state
+
+
+df_bystate = df_byevent[["State", "Total Deaths"]].copy().groupby(["State"]).sum().reset_index()
+
+# Data frame with states, deaths, state population, and deaths as percentage of state population (inner join of df_byevent grouped by state and state_pop_2018)
+
+df_bystate = pd.merge(df_bystate, state_pop_2018, on = "State", how = "inner")
+
+df_bystate["percentage of pop"] = (df_bystate["Total Deaths"] / df_bystate["POPESTIMATE2018"] * 100)
+
+
+
+
+# Age: average age, age of youngest victim, age of oldest victim
+
+# Find mean age in general
+
+df_knownage.mean()
+
+# Calculate average age of victim by state and store in dataframe
+
+df_bystate["Average Age"] = df_knownage.groupby(["State"]).mean().reset_index()["Age"]
+
+# Find maximum age of victim by state and store in dataframe
+
+df_bystate["Max Age"] = df_knownage.groupby(["State"]).max().reset_index()["Age"]
+
+# Find minimum age of victim by state and store in dataframe
+
+df_bystate["Min Age"] = df_knownage.groupby(["State"]).min().reset_index()["Age"]
+
+# Find states with average ages higher than mean for all states
+
+
+# - uncomment if you need a csv of the deaths by state as percentage of population dataframe - #
+df_bystate.to_csv("Deaths by State.csv")
+
+
+
+
 
